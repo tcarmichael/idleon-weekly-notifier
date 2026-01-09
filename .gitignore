@@ -1,0 +1,38 @@
+# IDE / Editor
+.idea/
+*.iml
+.vscode/
+
+# Gradle & Build Output
+.gradle/
+build/
+bin/
+gradle-app.setting
+!gradle-wrapper.jar
+
+# Kotlin
+*.class
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+*.tfplan
+crash.log
+override.tf
+override.tf.json
+.terraform.lock.hcl
+
+# Docker
+.docker/
+
+# System
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Secrets
+secrets.properties
+*.env

@@ -1,0 +1,65 @@
+name: Deploy Staging
+
+on:
+  workflow_dispatch:
+  # Optional: Trigger on specific comment or label if desired
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  SERVICE_NAME: idleon-bot-staging
+  REGION: us-east1
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      - name: 'Configure Docker'
+        run: |
+          gcloud auth configure-docker us-east1-docker.pkg.dev
+
+      - name: 'Build and Push Container'
+        run: |
+          IMAGE_TAG="us-east1-docker.pkg.dev/$PROJECT_ID/idleon-bot-repo/idleon-bot:staging-${{ github.sha }}"
+          docker build -t $IMAGE_TAG .
+          docker push $IMAGE_TAG
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: 'Setup Terraform'
+        uses: hashicorp/setup-terraform@v3
+
+      - name: 'Terraform Init'
+        run: terraform init
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+
+      - name: 'Terraform Workspace'
+        run: |
+          terraform workspace select staging || terraform workspace new staging
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+
+      - name: 'Terraform Apply'
+        run: |
+          terraform apply -auto-approve \
+            -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
+            -var="service_name=$SERVICE_NAME" \
+            -var="image_tag=staging-${{ github.sha }}" \
+            -var="discord_public_key=${{ secrets.DISCORD_PUBLIC_KEY }}" \
+            -var="sheets_api_key=${{ secrets.SHEETS_API_KEY }}"
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
