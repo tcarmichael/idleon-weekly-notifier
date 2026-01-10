@@ -5,7 +5,10 @@ import com.idleon.bot.services.SheetService
 import com.idleon.bot.routes.interactionRoutes
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
+import dev.kord.core.behavior.createGlobalApplicationCommands
 import dev.kord.core.entity.channel.TextChannel
+import dev.kord.rest.builder.interaction.boolean
+import dev.kord.rest.builder.interaction.string
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -39,7 +42,23 @@ fun Application.module() {
     // For purely serverless interaction response, we handle that via raw JSON.
     // But for the Cron job, we need to send proactive messages, which needs the Bot Token.
     val kordClient = if (DISCORD_BOT_TOKEN.isNotEmpty()) {
-         runBlocking { Kord(DISCORD_BOT_TOKEN) }
+         runBlocking { 
+             val kord = Kord(DISCORD_BOT_TOKEN)
+             
+             // Register Slash Command
+             kord.createGlobalApplicationCommands {
+                 input("configure", "Configure the bot for this server") {
+                     string("channel", "The channel to send notifications to") {
+                         required = true
+                     }
+                     boolean("boss_battle", "Enable weekly boss battle notifications") {
+                         required = false
+                     }
+                 }
+             }
+             
+             kord
+         }
     } else {
         null
     }
